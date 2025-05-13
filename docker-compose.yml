@@ -1,0 +1,51 @@
+services:
+  poc-server:
+    build: ./poc-server
+    volumes:
+      - ./poc-server/data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - secure_net
+
+  mitm-proxy:
+    build: ./mitm
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - secure_net
+    ports:
+      - "5000:5000"
+    depends_on:
+      - poc-server
+    stdin_open: true
+    tty: true
+
+  client_a:
+    build: ./poc-client
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - secure_net
+    depends_on:
+      - mitm-proxy
+    stdin_open: true
+    tty: true
+    environment:
+      - HOST=mitm-proxy
+
+  client_b:
+    build: ./poc-client
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - secure_net
+    depends_on:
+      - mitm-proxy
+    stdin_open: true
+    tty: true
+    environment:
+      - HOST=mitm-proxy
+
+networks:
+  secure_net:
+    driver: bridge

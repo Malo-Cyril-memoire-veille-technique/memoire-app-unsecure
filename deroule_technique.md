@@ -44,6 +44,16 @@ Ce proxy :
 
 Ce modèle est **plus simple que la réalité**, mais permet de **démontrer de façon claire** les effets d’une attaque MITM sur un protocole vulnérable.
 
+#### Cas réel MITM
+
+Dans une attaque Man-in-the-Middle réelle, l’attaquant ne contrôle pas directement la configuration du client. Il doit donc détourner le trafic réseau à son insu. Cela se fait généralement par :
+
+* **ARP spoofing** : l’attaquant se fait passer pour la passerelle réseau sur un réseau local.
+* **DNS spoofing** : il fournit de fausses résolutions de noms de domaine.
+* **Rogue Access Point** : il intercepte le trafic via un faux point d’accès Wi-Fi.
+
+Une fois le trafic redirigé, si les échanges ne sont pas chiffrés, l’attaquant peut lire, modifier, bloquer ou injecter des messages sans être détecté.
+
 ---
 
 ### 4. Points faibles volontairement conservés

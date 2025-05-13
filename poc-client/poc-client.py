@@ -31,16 +31,30 @@ username = ""
 running = True
 
 def send_request(data):
+    """
+    Envoie une requête au serveur et retourne la réponse.
+    :param data: Données à envoyer.
+    :return: Réponse du serveur.
+    """
     try:
+        if data.get("action") != "get_messages":
+            logging.info(f"📤 Envoi requête : {json.dumps(data)}")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((HOST, PORT))
             s.sendall(json.dumps(data).encode())
-            return s.recv(8192).decode()
+            response = s.recv(8192).decode()
+            if data.get("action") != "get_messages":
+                logging.info(f"📥 Réponse : {response}")
+            return response
     except Exception as e:
         logging.error(f"❌ Erreur envoi requête : {e}")
         return json.dumps({"status": "error", "message": str(e)})
 
+
 def create_account():
+    """
+    Crée un compte utilisateur.
+    """
     global username
     username = input("Créer un nom d'utilisateur : ").strip()
     password = getpass.getpass("Créer un mot de passe : ").strip()
@@ -52,24 +66,43 @@ def create_account():
         print("[ERREUR] Impossible de créer le compte :", result.get("message"))
 
 def login():
+    """
+    Connecte l'utilisateur.
+    :return: True si la connexion est réussie, sinon False.
+    """
     global username, session_token
     username = input("Nom d'utilisateur : ").strip()
     password = getpass.getpass("Mot de passe : ").strip()
+    logging.info(f"🔑 Tentative de connexion : {username}")
     response = send_request({"action": "login", "username": username, "password": password})
     result = json.loads(response)
     if result.get("status") == "ok":
         session_token = result.get("token")
+        logging.info(f"✅ Connexion réussie : {username}")
         return True
     else:
+        logging.warning(f"❌ Connexion échouée : {username} → {result.get('message')}")
         print("[ERREUR] Connexion échouée :", result.get("message"))
         return False
 
+
 def logout():
+    """
+    Déconnecte l'utilisateur.
+    """
     global session_token
+    logging.info(f"🚪 Déconnexion de {username}")
     send_request({"action": "logout", "token": session_token})
     session_token = None
 
 def save_sent_message(recipient, timestamp, text):
+    """
+    Enregistre un message envoyé dans l'historique.
+    :param recipient: Destinataire du message.
+    :param timestamp: Horodatage du message.
+    :param text: Contenu du message.
+    """
+    logging.info(f"✉️ Message envoyé à {recipient} à {timestamp} : {text}")
     path = os.path.join(HISTORY_FOLDER, f"{username}_to_{recipient}.json")
     try:
         with open(path, 'r') as f:
@@ -81,6 +114,13 @@ def save_sent_message(recipient, timestamp, text):
         json.dump(data, f)
 
 def save_received_message(sender, timestamp, text):
+    """
+    Enregistre un message reçu dans l'historique.
+    :param sender: Expéditeur du message.
+    :param timestamp: Horodatage du message.
+    :param text: Contenu du message.
+    """
+    logging.info(f"📨 Message reçu de {sender} à {timestamp} : {text}")
     path = os.path.join(HISTORY_FOLDER, f"{sender}_to_{username}.json")
     try:
         with open(path, 'r') as f:
@@ -92,6 +132,11 @@ def save_received_message(sender, timestamp, text):
         json.dump(data, f)
 
 def load_sent_messages(recipient):
+    """
+    Charge l'historique des messages envoyés à un destinataire.
+    :param recipient: Destinataire des messages.
+    :return: Liste des messages envoyés.
+    """
     path = os.path.join(HISTORY_FOLDER, f"{username}_to_{recipient}.json")
     try:
         with open(path, 'r') as f:
@@ -100,6 +145,11 @@ def load_sent_messages(recipient):
         return []
 
 def load_received_messages(sender):
+    """
+    Charge l'historique des messages reçus d'un expéditeur.
+    :param sender: Expéditeur des messages.
+    :return: Liste des messages reçus.
+    """
     path = os.path.join(HISTORY_FOLDER, f"{sender}_to_{username}.json")
     try:
         with open(path, 'r') as f:
@@ -108,6 +158,10 @@ def load_received_messages(sender):
         return []
 
 def get_messages():
+    """
+    Récupère les messages du serveur.
+    :return: Liste des messages.
+    """
     response = send_request({"action": "get_messages", "token": session_token})
     result = json.loads(response)
     if result.get("status") != "ok":
@@ -115,6 +169,10 @@ def get_messages():
     return result.get("messages", [])
 
 def get_conversation_partners():
+    """
+    Récupère la liste des partenaires de conversation.
+    :return: Liste des partenaires de conversation.
+    """
     messages = get_messages()
     partners = set()
     for msg in messages:
@@ -122,6 +180,10 @@ def get_conversation_partners():
     return sorted(partners)
 
 def fetch_live_messages(target):
+    """
+    Récupère les messages en temps réel pour une conversation donnée.
+    :param target: Destinataire de la conversation.
+    """
     global running
     seen = set()
     while running:
@@ -143,6 +205,10 @@ def fetch_live_messages(target):
         time.sleep(1)
 
 def chat_session(target):
+    """
+    Gère une session de chat avec un partenaire.
+    :param target: Nom du partenaire de conversation.
+    """
     global running
     print(f"\n[Conversation avec {target}] (tape 'exit' pour quitter)")
 
@@ -175,6 +241,9 @@ def chat_session(target):
         listener.join()
 
 def discussion_menu():
+    """
+    Affiche le menu des discussions.
+    """
     while True:
         print("\n--- DISCUSSIONS ---")
         partners = get_conversation_partners()
@@ -194,6 +263,9 @@ def discussion_menu():
             print("[ERREUR] Choix invalide.")
 
 def main_menu():
+    """
+    Affiche le menu principal.
+    """
     while True:
         print("\n--- MENU PRINCIPAL ---")
         print("1. Créer un compte")
@@ -209,6 +281,9 @@ def main_menu():
             break
 
 def user_menu():
+    """
+    Affiche le menu utilisateur après connexion.
+    """
     while True:
         print(f"\n[CLIENT: {username}] Menu")
         print("1. Discussions")

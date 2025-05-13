@@ -31,14 +31,28 @@ for file in [USERS_FILE, SESSIONS_FILE, MESSAGES_FILE]:
             json.dump({}, f)
 
 def load_json(path):
+    """
+    Charge les données d'un fichier JSON.
+    :param path: Chemin du fichier.
+    :return: Données chargées.
+    """
     with open(path, 'r') as f:
         return json.load(f)
 
 def save_json(path, data):
+    """
+    Enregistre les données dans un fichier JSON.
+    :param path: Chemin du fichier.
+    :param data: Données à enregistrer.
+    """
     with open(path, 'w') as f:
         json.dump(data, f, indent=2)
 
 def handle_client(conn):
+    """
+    Gère la connexion d'un client.
+    :param conn: La connexion du client.
+    """
     with conn:
         data = conn.recv(8192).decode()
         if not data:
@@ -46,23 +60,29 @@ def handle_client(conn):
         try:
             req = json.loads(data)
         except json.JSONDecodeError:
+            logging.warning("⛔ Requête invalide reçue (JSONDecodeError)")
             conn.sendall(json.dumps({"status": "error", "message": "invalid json"}).encode())
             return
 
         action = req.get("action")
+        if action != "get_messages":
+            logging.info(f"🛰️ Requête reçue : action={action} → {json.dumps(req)}")
 
         if action == "register":
             username = req.get("username")
             password = req.get("password")
             if not username or not password:
+                logging.warning("⚠️ Tentative d'inscription avec champs manquants")
                 conn.sendall(json.dumps({"status": "error", "message": "missing credentials"}).encode())
                 return
             users = load_json(USERS_FILE)
             if username in users:
+                logging.warning(f"❌ Nom d'utilisateur déjà pris : {username}")
                 conn.sendall(json.dumps({"status": "error", "message": "username already exists"}).encode())
                 return
             users[username] = hashlib.sha256(password.encode()).hexdigest()
             save_json(USERS_FILE, users)
+            logging.info(f"✅ Compte créé : {username}")
             conn.sendall(json.dumps({"status": "ok", "message": "user created"}).encode())
 
         elif action == "login":
@@ -71,19 +91,22 @@ def handle_client(conn):
             users = load_json(USERS_FILE)
             hashed_input = hashlib.sha256(password.encode()).hexdigest()
             if users.get(username) != hashed_input:
+                logging.warning(f"❌ Connexion refusée pour {username} (mauvais mot de passe)")
                 conn.sendall(json.dumps({"status": "error", "message": "invalid credentials"}).encode())
                 return
             sessions = load_json(SESSIONS_FILE)
             token = str(uuid.uuid4())
             sessions[token] = username
             save_json(SESSIONS_FILE, sessions)
+            logging.info(f"🔑 Connexion réussie : {username} → token={token}")
             conn.sendall(json.dumps({"status": "ok", "token": token}).encode())
 
         elif action == "logout":
             token = req.get("token")
             sessions = load_json(SESSIONS_FILE)
-            sessions.pop(token, None)
+            user = sessions.pop(token, None)
             save_json(SESSIONS_FILE, sessions)
+            logging.info(f"🚪 Déconnexion de {user} (token={token})")
             conn.sendall(json.dumps({"status": "ok"}).encode())
 
         elif action == "send_message":
@@ -93,11 +116,13 @@ def handle_client(conn):
 
             if token == "MITM_FAKE":
                 sender = req.get("sender")
+                logging.info(f"⚠️ Message injecté par MITM : {sender} → {to} : {message}")
             else:
                 sessions = load_json(SESSIONS_FILE)
                 sender = sessions.get(token)
 
             if not sender or not to or not message:
+                logging.warning("❌ Envoi de message refusé (champs manquants ou non autorisé)")
                 conn.sendall(json.dumps({"status": "error", "message": "missing or unauthorized"}).encode())
                 return
 
@@ -122,10 +147,13 @@ def handle_client(conn):
             conn.sendall(json.dumps({"status": "ok", "messages": msgs.get(user, [])}).encode())
 
         else:
+            logging.warning(f"❓ Action inconnue reçue : {action}")
             conn.sendall(json.dumps({"status": "error", "message": "unknown action"}).encode())
 
-
 def start_server():
+    """
+    Démarre le serveur et écoute les connexions entrantes.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, PORT))
         s.listen()

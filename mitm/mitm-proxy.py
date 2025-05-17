@@ -35,8 +35,8 @@ def log_packet(prefix, original, modified=None, blocked_reason=None):
         print(f"{prefix} (ORIGINAL):\n{json.dumps(parsed, indent=2)}\n")
 
         if blocked_reason:
-            logging.warning(f"{prefix} ❌ Message bloqué (mot interdit : '{blocked_reason}')")
-            print(f"{prefix} ❌ Message bloqué (mot interdit : '{blocked_reason}')\n")
+            logging.warning(f"{prefix} Message bloqué (mot interdit : '{blocked_reason}')")
+            print(f"{prefix} Message bloqué (mot interdit : '{blocked_reason}')\n")
 
         elif modified and modified != original:
             parsed_mod = json.loads(modified)
@@ -79,7 +79,7 @@ def handle_connection(client_conn, addr):
     try:
         server_conn = socket.create_connection((REAL_SERVER, REAL_PORT))
     except Exception as e:
-        logging.error(f"❌ Connexion au serveur échouée : {e}")
+        logging.error(f"Connexion au serveur échouée : {e}")
         client_conn.close()
         return
 
@@ -94,11 +94,11 @@ def handle_connection(client_conn, addr):
                     break
                 data_str = data.decode()
                 modified, blocked_reason = modify_payload(data_str)
-                log_packet("📥 Requête client", data_str, modified, blocked_reason)
+                log_packet("Requête client", data_str, modified, blocked_reason)
                 if modified is not None:
                     server_conn.sendall(modified.encode())
             except Exception as e:
-                logging.error(f"⚠️ Erreur client → serveur : {e}")
+                logging.error(f"Erreur client → serveur : {e}")
                 break
 
     def from_server():
@@ -111,10 +111,10 @@ def handle_connection(client_conn, addr):
                 if not data:
                     break
                 data_str = data.decode()
-                log_packet("📤 Réponse serveur", data_str)
+                log_packet("Réponse serveur", data_str)
                 client_conn.sendall(data)
             except Exception as e:
-                logging.error(f"⚠️ Erreur serveur → client : {e}")
+                logging.error(f"Erreur serveur → client : {e}")
                 break
 
     threading.Thread(target=from_client, daemon=True).start()
@@ -124,8 +124,8 @@ def start_proxy():
     """
     Démarre le proxy MITM.
     """
-    print(f"🔌 MITM proxy en écoute sur le port {PROXY_PORT}...", flush=True)
-    logging.info(f"🔌 MITM proxy démarré sur {PROXY_PORT}")
+    print(f"MITM proxy en écoute sur le port {PROXY_PORT}...", flush=True)
+    logging.info(f"MITM proxy démarré sur {PROXY_PORT}")
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(('0.0.0.0', PROXY_PORT))
         s.listen()
@@ -138,7 +138,7 @@ def interactive_attacker():
     Interface interactive pour l'attaquant.
     Permet d'envoyer des messages falsifiés.
     """
-    print("\n💀 [MITM] Interface interactive prête.")
+    print("\n[MITM] Interface interactive prête.")
     while True:
         print("\n[MITM] Envoyer un faux message (laisser vide pour annuler)")
         fake_from = input("> De (expéditeur) : ").strip()
@@ -163,12 +163,12 @@ def interactive_attacker():
             with socket.create_connection((REAL_SERVER, REAL_PORT)) as s:
                 s.sendall(json.dumps(fake_data).encode())
                 response = s.recv(8192).decode()
-                log_packet("📤 Message injecté par MITM", json.dumps(fake_data))
-                logging.info(f"📥 Réponse serveur à injection : {response}")
-                print(f"[MITM] ✅ Injecté : {message}")
+                log_packet("Message injecté par MITM", json.dumps(fake_data))
+                logging.info(f"Réponse serveur à injection : {response}")
+                print(f"[MITM] Injecté : {message}")
         except Exception as e:
-            logging.error(f"[MITM] ❌ Erreur injection : {e}")
-            print(f"[MITM] ❌ Erreur envoi : {e}")
+            logging.error(f"[MITM] Erreur injection : {e}")
+            print(f"[MITM] Erreur envoi : {e}")
 
 
 if __name__ == "__main__":

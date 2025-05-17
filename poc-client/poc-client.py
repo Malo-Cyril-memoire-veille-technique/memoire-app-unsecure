@@ -38,16 +38,16 @@ def send_request(data):
     """
     try:
         if data.get("action") != "get_messages":
-            logging.info(f"📤 Envoi requête : {json.dumps(data)}")
+            logging.info(f"Envoi requête : {json.dumps(data)}")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((HOST, PORT))
             s.sendall(json.dumps(data).encode())
             response = s.recv(8192).decode()
             if data.get("action") != "get_messages":
-                logging.info(f"📥 Réponse : {response}")
+                logging.info(f"Réponse : {response}")
             return response
     except Exception as e:
-        logging.error(f"❌ Erreur envoi requête : {e}")
+        logging.error(f"Erreur envoi requête : {e}")
         return json.dumps({"status": "error", "message": str(e)})
 
 
@@ -73,15 +73,15 @@ def login():
     global username, session_token
     username = input("Nom d'utilisateur : ").strip()
     password = getpass.getpass("Mot de passe : ").strip()
-    logging.info(f"🔑 Tentative de connexion : {username}")
+    logging.info(f"Tentative de connexion : {username}")
     response = send_request({"action": "login", "username": username, "password": password})
     result = json.loads(response)
     if result.get("status") == "ok":
         session_token = result.get("token")
-        logging.info(f"✅ Connexion réussie : {username}")
+        logging.info(f"Connexion réussie : {username}")
         return True
     else:
-        logging.warning(f"❌ Connexion échouée : {username} → {result.get('message')}")
+        logging.warning(f"Connexion échouée : {username} → {result.get('message')}")
         print("[ERREUR] Connexion échouée :", result.get("message"))
         return False
 
@@ -91,7 +91,7 @@ def logout():
     Déconnecte l'utilisateur.
     """
     global session_token
-    logging.info(f"🚪 Déconnexion de {username}")
+    logging.info(f"Déconnexion de {username}")
     send_request({"action": "logout", "token": session_token})
     session_token = None
 
@@ -102,7 +102,7 @@ def save_sent_message(recipient, timestamp, text):
     :param timestamp: Horodatage du message.
     :param text: Contenu du message.
     """
-    logging.info(f"✉️ Message envoyé à {recipient} à {timestamp} : {text}")
+    logging.info(f"Message envoyé à {recipient} à {timestamp} : {text}")
     path = os.path.join(HISTORY_FOLDER, f"{username}_to_{recipient}.json")
     try:
         with open(path, 'r') as f:
@@ -120,7 +120,7 @@ def save_received_message(sender, timestamp, text):
     :param timestamp: Horodatage du message.
     :param text: Contenu du message.
     """
-    logging.info(f"📨 Message reçu de {sender} à {timestamp} : {text}")
+    logging.info(f"Message reçu de {sender} à {timestamp} : {text}")
     path = os.path.join(HISTORY_FOLDER, f"{sender}_to_{username}.json")
     try:
         with open(path, 'r') as f:
